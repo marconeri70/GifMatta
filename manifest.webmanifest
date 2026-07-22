@@ -1,0 +1,15 @@
+{
+  "name": "GifFacile – Crea GIF divertenti",
+  "short_name": "GifFacile",
+  "description": "Crea GIF divertenti da foto e video direttamente dal telefono.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#f5f3ff",
+  "theme_color": "#6d28d9",
+  "orientation": "any",
+  "icons": [
+    { "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

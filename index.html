@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#6d28d9">
+  <meta name="description" content="Crea GIF divertenti da foto e brevi video, direttamente nel browser.">
+  <title>GifFacile – Crea GIF divertenti</title>
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icons/icon-192.png">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-mark" aria-hidden="true">😂</span>
+      <div>
+        <h1>GifFacile</h1>
+        <p>Trasforma foto e video in una GIF divertente</p>
+      </div>
+    </div>
+    <button id="installBtn" class="button ghost hidden" type="button">Installa app</button>
+  </header>
+
+  <main class="app-shell">
+    <section class="panel intro-card">
+      <div>
+        <span class="eyebrow">Tutto sul tuo dispositivo</span>
+        <h2>Crea, personalizza e condividi</h2>
+        <p>Le foto e i video vengono elaborati nel browser e non vengono caricati su un server.</p>
+      </div>
+      <div class="intro-icons" aria-hidden="true">📷 🎬 ✍️ ✨</div>
+    </section>
+
+    <section class="workspace">
+      <div class="editor-column">
+        <section class="panel">
+          <div class="section-heading">
+            <div>
+              <span class="step">1</span>
+              <h2>Scegli il contenuto</h2>
+            </div>
+          </div>
+
+          <div class="mode-tabs" role="tablist" aria-label="Tipo di contenuto">
+            <button id="photoModeBtn" class="mode-tab active" type="button" role="tab" aria-selected="true">📷 Foto</button>
+            <button id="videoModeBtn" class="mode-tab" type="button" role="tab" aria-selected="false">🎬 Video</button>
+          </div>
+
+          <div id="photoPanel" class="mode-panel">
+            <label class="upload-zone" for="photoInput">
+              <input id="photoInput" type="file" accept="image/*" multiple hidden>
+              <span class="upload-icon">＋</span>
+              <strong>Scegli una o più foto</strong>
+              <small>Puoi selezionarle anche dalla galleria del telefono</small>
+            </label>
+            <div id="photoList" class="photo-list" aria-live="polite"></div>
+          </div>
+
+          <div id="videoPanel" class="mode-panel hidden">
+            <label class="upload-zone" for="videoInput">
+              <input id="videoInput" type="file" accept="video/*" hidden>
+              <span class="upload-icon">▶</span>
+              <strong>Scegli un breve video</strong>
+              <small>La GIF utilizzerà al massimo 6 secondi</small>
+            </label>
+            <div id="videoInfo" class="video-info hidden"></div>
+            <div class="form-grid compact">
+              <label>
+                Inizio (secondi)
+                <input id="videoStart" type="number" min="0" step="0.1" value="0">
+              </label>
+              <label>
+                Durata
+                <input id="videoDuration" type="number" min="0.5" max="6" step="0.5" value="3">
+              </label>
+              <label>
+                Fotogrammi/sec.
+                <select id="videoFps">
+                  <option value="4">4 – leggero</option>
+                  <option value="6" selected>6 – consigliato</option>
+                  <option value="8">8 – fluido</option>
+                  <option value="10">10 – massimo</option>
+                </select>
+              </label>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="section-heading">
+            <div>
+              <span class="step">2</span>
+              <h2>Rendila divertente</h2>
+            </div>
+          </div>
+
+          <div class="templates" aria-label="Frasi pronte">
+            <button type="button" class="template" data-top="QUANDO È LUNEDÌ" data-bottom="E TU NON SEI PRONTO">Lunedì</button>
+            <button type="button" class="template" data-top="IO CHE ASPETTO" data-bottom="LO STIPENDIO">Stipendio</button>
+            <button type="button" class="template" data-top="QUANDO DICONO" data-bottom="CI VUOLE SOLO UN MINUTO">Un minuto</button>
+            <button type="button" class="template" data-top="NESSUN PROBLEMA" data-bottom="AVEVANO DETTO...">Nessun problema</button>
+          </div>
+
+          <div class="form-grid">
+            <label class="wide">
+              Testo in alto
+              <input id="topText" type="text" maxlength="70" placeholder="Scrivi la frase in alto">
+            </label>
+            <label class="wide">
+              Testo in basso
+              <input id="bottomText" type="text" maxlength="70" placeholder="Scrivi la frase in basso">
+            </label>
+            <label>
+              Colore testo
+              <input id="textColor" type="color" value="#ffffff">
+            </label>
+            <label>
+              Dimensione testo
+              <input id="fontSize" type="range" min="22" max="64" value="42">
+              <output id="fontSizeValue">42 px</output>
+            </label>
+            <label>
+              Emoji
+              <select id="emojiSelect">
+                <option value="">Nessuna</option>
+                <option value="😂">😂 Risata</option>
+                <option value="🤣">🤣 Rotolo</option>
+                <option value="😱">😱 Sorpresa</option>
+                <option value="🤦">🤦 Disperazione</option>
+                <option value="😎">😎 Mitico</option>
+                <option value="🔥">🔥 Fuoco</option>
+                <option value="💸">💸 Soldi</option>
+                <option value="❤️">❤️ Cuore</option>
+              </select>
+            </label>
+            <label>
+              Dimensione emoji
+              <input id="emojiSize" type="range" min="32" max="130" value="72">
+              <output id="emojiSizeValue">72 px</output>
+            </label>
+            <label>
+              Posizione orizzontale
+              <input id="emojiX" type="range" min="5" max="95" value="78">
+            </label>
+            <label>
+              Posizione verticale
+              <input id="emojiY" type="range" min="10" max="90" value="50">
+            </label>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="section-heading">
+            <div>
+              <span class="step">3</span>
+              <h2>Impostazioni GIF</h2>
+            </div>
+          </div>
+
+          <div class="form-grid">
+            <label>
+              Formato
+              <select id="aspectRatio">
+                <option value="1:1">Quadrato 1:1</option>
+                <option value="4:5">Verticale 4:5</option>
+                <option value="16:9">Orizzontale 16:9</option>
+                <option value="9:16">Storia 9:16</option>
+              </select>
+            </label>
+            <label>
+              Risoluzione
+              <select id="resolution">
+                <option value="320">320 px – leggera</option>
+                <option value="480" selected>480 px – consigliata</option>
+                <option value="640">640 px – alta</option>
+              </select>
+            </label>
+            <label>
+              Adattamento
+              <select id="fitMode">
+                <option value="cover" selected>Riempi e ritaglia</option>
+                <option value="contain">Mostra tutto</option>
+              </select>
+            </label>
+            <label id="photoDelayLabel">
+              Durata di ogni foto
+              <select id="photoDelay">
+                <option value="350">0,35 secondi</option>
+                <option value="600" selected>0,6 secondi</option>
+                <option value="1000">1 secondo</option>
+                <option value="1500">1,5 secondi</option>
+              </select>
+            </label>
+            <label class="switch-row wide">
+              <span>
+                <strong>Effetto boomerang</strong>
+                <small>Riproduce anche i fotogrammi al contrario</small>
+              </span>
+              <input id="boomerang" type="checkbox">
+            </label>
+          </div>
+        </section>
+      </div>
+
+      <aside class="preview-column">
+        <section class="panel preview-panel">
+          <div class="section-heading preview-heading">
+            <div>
+              <span class="step">4</span>
+              <h2>Anteprima</h2>
+            </div>
+            <button id="refreshPreviewBtn" class="icon-button" type="button" title="Aggiorna anteprima" aria-label="Aggiorna anteprima">↻</button>
+          </div>
+
+          <div id="canvasWrap" class="canvas-wrap ratio-1-1">
+            <canvas id="previewCanvas" width="480" height="480"></canvas>
+            <div id="emptyPreview" class="empty-preview">
+              <span>🎞️</span>
+              <strong>La tua GIF apparirà qui</strong>
+              <small>Carica una foto o un video per iniziare</small>
+            </div>
+          </div>
+
+          <button id="generateBtn" class="button primary large" type="button" disabled>
+            ✨ Crea la GIF
+          </button>
+
+          <div id="progressBox" class="progress-box hidden" aria-live="polite">
+            <div class="progress-track"><span id="progressBar"></span></div>
+            <p id="progressText">Preparazione…</p>
+          </div>
+
+          <div id="resultBox" class="result-box hidden">
+            <h3>La tua GIF è pronta! 🎉</h3>
+            <img id="resultImage" alt="GIF creata">
+            <p id="resultMeta"></p>
+            <div class="result-actions">
+              <a id="downloadBtn" class="button primary" download="gif-facile.gif">⬇ Scarica</a>
+              <button id="shareBtn" class="button secondary" type="button">↗ Condividi</button>
+            </div>
+          </div>
+        </section>
+      </aside>
+    </section>
+
+    <section class="panel recent-panel">
+      <div class="section-heading">
+        <div>
+          <span class="step">✓</span>
+          <h2>GIF recenti</h2>
+        </div>
+        <button id="clearHistoryBtn" class="button ghost small" type="button">Svuota</button>
+      </div>
+      <div id="recentGrid" class="recent-grid">
+        <p class="muted">Le GIF create verranno conservate soltanto su questo dispositivo.</p>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <footer>
+    <p>GifFacile funziona nel browser. Per risultati più leggeri usa video brevi e risoluzione 320–480 px.</p>
+  </footer>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
