@@ -1,7 +1,6 @@
-const GIF_LIB_URL = "https://unpkg.com/gifenc@1.0.3/dist/gifenc.esm.js";
 const MAX_PHOTOS = 20;
 const MAX_VIDEO_SECONDS = 6;
-const MAX_VIDEO_FRAMES = 60;
+const MAX_VIDEO_FRAMES = 32;
 const MAX_HISTORY = 8;
 
 const $ = selector => document.querySelector(selector);
@@ -17,11 +16,16 @@ const dom = {
   videoStart: $("#videoStart"),
   videoDuration: $("#videoDuration"),
   videoFps: $("#videoFps"),
+  presetSelect: $("#presetSelect"),
+  applyPresetBtn: $("#applyPresetBtn"),
   topText: $("#topText"),
   bottomText: $("#bottomText"),
   textColor: $("#textColor"),
   fontSize: $("#fontSize"),
   fontSizeValue: $("#fontSizeValue"),
+  animationStyle: $("#animationStyle"),
+  effectIntensity: $("#effectIntensity"),
+  effectIntensityValue: $("#effectIntensityValue"),
   emojiSelect: $("#emojiSelect"),
   emojiSize: $("#emojiSize"),
   emojiSizeValue: $("#emojiSizeValue"),
@@ -61,19 +65,98 @@ const state = {
   video: null,
   currentBlob: null,
   currentUrl: null,
-  gifLibrary: null,
   deferredInstallPrompt: null,
+  autoTimer: null,
+  generationInProgress: false,
+  generationQueued: false,
   previewToken: 0,
-  recentUrls: []
+  recentUrls: [],
+  activePresetKey: "auto"
 };
 
-init();
+
+
+const PRESET_LIBRARY = {
+  auto: {
+    top: "CHE FACCIA",
+    bottom: "NON CE LA POSSO FARE",
+    emoji: "😂",
+    animation: "zoom"
+  },
+  monday: {
+    top: "QUANDO È LUNEDÌ",
+    bottom: "E TU NON SEI PRONTO",
+    emoji: "🤦",
+    animation: "slide"
+  },
+  salary: {
+    top: "IO CHE ASPETTO",
+    bottom: "LO STIPENDIO",
+    emoji: "💸",
+    animation: "pulse"
+  },
+  minute: {
+    top: "QUANDO DICONO",
+    bottom: "CI VUOLE SOLO UN MINUTO",
+    emoji: "😑",
+    animation: "shake"
+  },
+  problems: {
+    top: "NESSUN PROBLEMA",
+    bottom: "AVEVANO DETTO...",
+    emoji: "🤣",
+    animation: "dramatic"
+  },
+  shock: {
+    top: "ASPETTA... COSA?",
+    bottom: "IO SONO SCONVOLTO",
+    emoji: "😱",
+    animation: "shake"
+  },
+  work: {
+    top: "IO A LAVORO",
+    bottom: "DOPO 3 ORE DI SONNO",
+    emoji: "🥴",
+    animation: "slide"
+  },
+  hunger: {
+    top: "QUANDO DICI",
+    bottom: "MANGIO SOLO UNA COSA",
+    emoji: "🍕",
+    animation: "zoom"
+  },
+  love: {
+    top: "QUANDO MI GUARDI COSÌ",
+    bottom: "IO MI SCIOGLIO",
+    emoji: "❤️",
+    animation: "pulse"
+  },
+  weekend: {
+    top: "IO CHE GUARDO",
+    bottom: "ARRIVARE IL WEEKEND",
+    emoji: "😎",
+    animation: "zoom"
+  },
+  sleep: {
+    top: "LA MIA FACCIA",
+    bottom: "QUANDO SUONA LA SVEGLIA",
+    emoji: "😴",
+    animation: "dramatic"
+  },
+  victory: {
+    top: "MISSIONE COMPIUTA",
+    bottom: "GRANDE VITTORIA",
+    emoji: "🏆",
+    animation: "pulse"
+  }
+};
 
 function init() {
   bindEvents();
   updateCanvasDimensions();
   renderEmptyCanvas();
   loadRecentGifs();
+  applyPreset(dom.presetSelect?.value || "auto", { silent: true, onlyIfEmpty: true });
 
   if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
     navigator.serviceWorker.register("./sw.js").catch(error => {
@@ -88,7 +171,7 @@ function bindEvents() {
   dom.photoInput.addEventListener("change", handlePhotosSelected);
   dom.videoInput.addEventListener("change", handleVideoSelected);
   dom.photoList.addEventListener("click", handlePhotoAction);
-  dom.generateBtn.addEventListener("click", generateGif);
+  dom.generateBtn.addEventListener("click", () => generateGif(false));
   dom.shareBtn.addEventListener("click", shareCurrentGif);
   dom.refreshPreviewBtn.addEventListener("click", updatePreview);
   dom.clearHistoryBtn.addEventListener("click", clearHistory);
@@ -96,14 +179,18 @@ function bindEvents() {
 
   document.querySelectorAll(".template").forEach(button => {
     button.addEventListener("click", () => {
-      dom.topText.value = button.dataset.top || "";
-      dom.bottomText.value = button.dataset.bottom || "";
-      updatePreview();
+      const presetKey = button.dataset.preset || "auto";
+      dom.presetSelect.value = presetKey;
+      applyPreset(presetKey);
     });
   });
 
+  dom.presetSelect.addEventListener("change", () => applyPreset(dom.presetSelect.value));
+  dom.applyPresetBtn.addEventListener("click", () => applyPreset(dom.presetSelect.value));
+
   const previewInputs = [
     dom.topText, dom.bottomText, dom.textColor, dom.fontSize,
+    dom.animationStyle, dom.effectIntensity,
     dom.emojiSelect, dom.emojiSize, dom.emojiX, dom.emojiY,
     dom.aspectRatio, dom.resolution, dom.fitMode,
     dom.videoStart, dom.videoDuration
@@ -113,8 +200,17 @@ function bindEvents() {
     input.addEventListener("change", updatePreview);
   });
 
+  const automaticInputs = [...previewInputs, dom.photoDelay, dom.videoFps, dom.boomerang];
+  automaticInputs.forEach(input => {
+    input.addEventListener("input", debounce(() => requestAutoGenerate(500), 180));
+    input.addEventListener("change", () => requestAutoGenerate(250));
+  });
+
   dom.fontSize.addEventListener("input", () => {
     dom.fontSizeValue.textContent = `${dom.fontSize.value} px`;
+  });
+  dom.effectIntensity.addEventListener("input", () => {
+    dom.effectIntensityValue.textContent = `${dom.effectIntensity.value} / 10`;
   });
   dom.emojiSize.addEventListener("input", () => {
     dom.emojiSizeValue.textContent = `${dom.emojiSize.value} px`;
@@ -146,6 +242,7 @@ function setMode(mode) {
   dom.photoDelayLabel.classList.toggle("hidden", !isPhoto);
   updateGenerateState();
   updatePreview();
+  requestAutoGenerate(250);
 }
 
 async function handlePhotosSelected(event) {
@@ -168,7 +265,8 @@ async function handlePhotosSelected(event) {
   event.target.value = "";
   renderPhotoList();
   updateGenerateState();
-  updatePreview();
+  await updatePreview();
+  requestAutoGenerate(180);
 }
 
 async function loadImageSource(file) {
@@ -228,6 +326,7 @@ function handlePhotoAction(event) {
   renderPhotoList();
   updateGenerateState();
   updatePreview();
+  requestAutoGenerate(220);
 }
 
 async function handleVideoSelected(event) {
@@ -264,6 +363,7 @@ async function handleVideoSelected(event) {
     dom.videoInfo.classList.remove("hidden");
     updateGenerateState();
     await updatePreview();
+    requestAutoGenerate(180);
   } catch (error) {
     console.error(error);
     URL.revokeObjectURL(url);
@@ -288,7 +388,22 @@ function clearVideo() {
 
 function updateGenerateState() {
   const hasContent = state.mode === "photo" ? state.photos.length > 0 : Boolean(state.video);
-  dom.generateBtn.disabled = !hasContent;
+  dom.generateBtn.disabled = !hasContent || state.generationInProgress;
+  if (!state.generationInProgress) {
+    dom.generateBtn.textContent = hasContent ? "⚡ Rigenera ora" : "⚡ Generazione automatica";
+  }
+}
+
+function requestAutoGenerate(delay = 350) {
+  const hasContent = state.mode === "photo" ? state.photos.length > 0 : Boolean(state.video);
+  if (!hasContent) return;
+  clearTimeout(state.autoTimer);
+  if (state.generationInProgress) {
+    state.generationQueued = true;
+    return;
+  }
+  dom.generateBtn.textContent = "⚡ Creazione automatica…";
+  state.autoTimer = setTimeout(() => generateGif(true), delay);
 }
 
 function updateCanvasDimensions() {
@@ -323,7 +438,7 @@ async function updatePreview() {
       await seekVideo(state.video, start);
       if (token !== state.previewToken) return;
     }
-    drawFrame(source);
+    drawFrame(source, createAnimationFrameState(getResolvedAnimationStyle(), 0.35));
     dom.emptyPreview.classList.add("hidden");
   } catch (error) {
     console.warn("Anteprima non disponibile:", error);
@@ -337,20 +452,20 @@ function renderEmptyCanvas() {
   dom.emptyPreview.classList.remove("hidden");
 }
 
-function drawFrame(source) {
+function drawFrame(source, animationState = null) {
   const width = dom.canvas.width;
   const height = dom.canvas.height;
   ctx.save();
   ctx.clearRect(0, 0, width, height);
   ctx.fillStyle = "#15121b";
   ctx.fillRect(0, 0, width, height);
-  drawMedia(source, width, height, dom.fitMode.value);
+  drawMedia(source, width, height, dom.fitMode.value, animationState);
   drawReadabilityGradient(width, height);
   drawOverlay(width, height);
   ctx.restore();
 }
 
-function drawMedia(source, canvasWidth, canvasHeight, fit) {
+function drawMedia(source, canvasWidth, canvasHeight, fit, animationState = null) {
   const sourceWidth = source.videoWidth || source.naturalWidth || source.width;
   const sourceHeight = source.videoHeight || source.naturalHeight || source.height;
   if (!sourceWidth || !sourceHeight) return;
@@ -362,7 +477,95 @@ function drawMedia(source, canvasWidth, canvasHeight, fit) {
   const drawHeight = sourceHeight * scale;
   const x = (canvasWidth - drawWidth) / 2;
   const y = (canvasHeight - drawHeight) / 2;
-  ctx.drawImage(source, x, y, drawWidth, drawHeight);
+
+  if (!animationState || animationState.style === "none") {
+    ctx.drawImage(source, x, y, drawWidth, drawHeight);
+    return;
+  }
+
+  ctx.save();
+  ctx.translate(canvasWidth / 2 + animationState.dx, canvasHeight / 2 + animationState.dy);
+  ctx.rotate(animationState.rotation);
+  ctx.scale(animationState.scale, animationState.scale);
+  ctx.drawImage(source, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+  ctx.restore();
+}
+
+
+function applyPreset(presetKey, options = {}) {
+  const { silent = false, onlyIfEmpty = false } = options;
+  const preset = PRESET_LIBRARY[presetKey] || PRESET_LIBRARY.auto;
+  state.activePresetKey = presetKey in PRESET_LIBRARY ? presetKey : "auto";
+  dom.presetSelect.value = state.activePresetKey;
+
+  if (!onlyIfEmpty || !dom.topText.value.trim()) dom.topText.value = preset.top || "";
+  if (!onlyIfEmpty || !dom.bottomText.value.trim()) dom.bottomText.value = preset.bottom || "";
+  if (!onlyIfEmpty || !dom.emojiSelect.value) dom.emojiSelect.value = preset.emoji || "";
+  if ((dom.animationStyle.value === "auto" || !onlyIfEmpty) && preset.animation) {
+    dom.animationStyle.value = dom.animationStyle.value === "none" && onlyIfEmpty ? "none" : preset.animation;
+  }
+  if (!silent) {
+    showToast(`Idea applicata: ${dom.presetSelect.options[dom.presetSelect.selectedIndex].text}`);
+  }
+  updatePreview();
+  requestAutoGenerate(220);
+}
+
+function getResolvedAnimationStyle() {
+  const selected = dom.animationStyle.value || "auto";
+  if (selected !== "auto") return selected;
+  const preset = PRESET_LIBRARY[state.activePresetKey] || PRESET_LIBRARY.auto;
+  if (preset?.animation) return preset.animation;
+  if (state.mode === "photo" && state.photos.length <= 1) return "zoom";
+  return "slide";
+}
+
+function createAnimationFrameState(style, progress) {
+  const intensity = (Number(dom.effectIntensity.value) || 6) / 10;
+  const wave = Math.sin(progress * Math.PI * 2);
+  const ping = Math.sin(progress * Math.PI);
+  const sway = Math.sin(progress * Math.PI * 4);
+  let scale = 1;
+  let dx = 0;
+  let dy = 0;
+  let rotation = 0;
+
+  switch (style) {
+    case "zoom":
+      scale = 1 + 0.08 * intensity + 0.12 * progress * intensity;
+      dx = Math.sin(progress * Math.PI * 2) * 10 * intensity;
+      dy = -6 * ping * intensity;
+      break;
+    case "pulse":
+      scale = 1 + (0.04 + 0.05 * intensity) * ping;
+      dy = -4 * ping * intensity;
+      break;
+    case "shake":
+      scale = 1.03 + 0.03 * intensity;
+      dx = sway * 14 * intensity;
+      dy = Math.cos(progress * Math.PI * 6) * 5 * intensity;
+      rotation = sway * 0.03 * intensity;
+      break;
+    case "slide":
+      scale = 1.04 + 0.03 * intensity;
+      dx = (0.5 - progress) * 28 * intensity;
+      rotation = (0.5 - progress) * 0.02 * intensity;
+      break;
+    case "spin":
+      scale = 1.05 + 0.03 * intensity;
+      rotation = wave * 0.04 * intensity;
+      dy = -3 * ping * intensity;
+      break;
+    case "dramatic":
+      scale = 1 + 0.05 * intensity + 0.15 * progress * intensity;
+      dy = -12 * progress * intensity;
+      rotation = -0.02 * intensity;
+      break;
+    default:
+      return { style: "none", scale: 1, dx: 0, dy: 0, rotation: 0 };
+  }
+
+  return { style, scale, dx, dy, rotation };
 }
 
 function drawReadabilityGradient(width, height) {
@@ -459,70 +662,90 @@ function wrapText(text, maxWidth) {
   return lines;
 }
 
-async function generateGif() {
-  if (dom.generateBtn.disabled) return;
+async function generateGif(isAutomatic = false) {
+  const hasContent = state.mode === "photo" ? state.photos.length > 0 : Boolean(state.video);
+  if (!hasContent) return;
+  if (state.generationInProgress) {
+    state.generationQueued = true;
+    return;
+  }
+
+  clearTimeout(state.autoTimer);
+  state.generationInProgress = true;
+  state.generationQueued = false;
   setBusy(true);
   dom.resultBox.classList.add("hidden");
-  setProgress(2, "Caricamento del motore GIF…");
+  setProgress(3, isAutomatic ? "Creazione automatica della GIF…" : "Preparazione della GIF…");
 
   try {
-    const { GIFEncoder, quantize, applyPalette } = await loadGifLibrary();
+    if (!window.SimpleGifEncoder) throw new Error("Motore GIF non disponibile");
     updateCanvasDimensions();
     const { width, height } = getOutputSize();
-    const gif = GIFEncoder();
-    const paletteSize = width >= 600 || height >= 600 ? 128 : 192;
+    const gif = new window.SimpleGifEncoder(width, height, { repeat: 0 });
 
     if (state.mode === "photo") {
-      await encodePhotoFrames(gif, quantize, applyPalette, paletteSize, width, height);
+      await encodePhotoFrames(gif, width, height);
     } else {
-      await encodeVideoFrames(gif, quantize, applyPalette, paletteSize, width, height);
+      await encodeVideoFrames(gif, width, height);
     }
 
     setProgress(96, "Completamento del file…");
-    gif.finish();
-    const blob = new Blob([gif.bytes()], { type: "image/gif" });
-    if (!blob.size) throw new Error("GIF vuota");
+    const bytes = gif.finish();
+    const blob = new Blob([bytes], { type: "image/gif" });
+    if (!blob.size || gif.frameCount < 1) throw new Error("GIF vuota");
 
     showResult(blob, width, height);
     await saveGifToHistory(blob, width, height);
     await loadRecentGifs();
-    setProgress(100, "GIF pronta!");
+    setProgress(100, "GIF pronta automaticamente!");
+    showToast("GIF creata automaticamente.");
     setTimeout(() => dom.progressBox.classList.add("hidden"), 700);
   } catch (error) {
     console.error(error);
     dom.progressBox.classList.add("hidden");
-    const offlineMessage = !navigator.onLine
-      ? "Per la prima creazione serve una connessione internet. Poi la libreria può restare nella cache."
-      : "Non è stato possibile creare la GIF. Prova con meno fotogrammi o una risoluzione più bassa.";
-    showToast(offlineMessage, 5200);
+    showToast(`Non è stato possibile creare la GIF: ${error.message || "errore sconosciuto"}.`, 5200);
   } finally {
+    state.generationInProgress = false;
     setBusy(false);
+    if (state.generationQueued) {
+      state.generationQueued = false;
+      requestAutoGenerate(250);
+    }
   }
 }
 
-async function loadGifLibrary() {
-  if (state.gifLibrary) return state.gifLibrary;
-  state.gifLibrary = await import(GIF_LIB_URL);
-  return state.gifLibrary;
-}
-
-async function encodePhotoFrames(gif, quantize, applyPalette, paletteSize, width, height) {
+async function encodePhotoFrames(gif, width, height) {
   const delay = Number(dom.photoDelay.value) || 600;
+  const style = getResolvedAnimationStyle();
   const base = [...state.photos];
   const sequence = dom.boomerang.checked && base.length > 1
     ? [...base, ...base.slice(1, -1).reverse()]
     : base;
+  const totalUnits = sequence.length;
 
   for (let i = 0; i < sequence.length; i++) {
-    drawFrame(sequence[i].source);
-    encodeCurrentCanvas(gif, quantize, applyPalette, paletteSize, delay, width, height);
-    const percent = 8 + Math.round(((i + 1) / sequence.length) * 84);
-    setProgress(percent, `Elaborazione foto ${i + 1} di ${sequence.length}…`);
-    await nextPaint();
+    const photo = sequence[i];
+    const framesPerPhoto = sequence.length === 1
+      ? Math.max(8, Math.round(8 + (Number(dom.effectIntensity.value) || 6) / 2))
+      : style === "none" ? 1 : 4;
+    const perFrameDelay = Math.max(70, Math.round(delay / framesPerPhoto));
+
+    for (let frameIndex = 0; frameIndex < framesPerPhoto; frameIndex++) {
+      const progress = framesPerPhoto === 1 ? 0.5 : frameIndex / (framesPerPhoto - 1);
+      const animState = createAnimationFrameState(style, progress);
+      drawFrame(photo.source, animState);
+      encodeCurrentCanvas(gif, perFrameDelay, width, height);
+      const currentUnit = i + (frameIndex + 1) / framesPerPhoto;
+      const percent = 8 + Math.round((currentUnit / totalUnits) * 84);
+      setProgress(percent, sequence.length === 1
+        ? `Animazione foto singola ${frameIndex + 1} di ${framesPerPhoto}…`
+        : `Elaborazione foto ${i + 1} di ${sequence.length}…`);
+      await nextPaint();
+    }
   }
 }
 
-async function encodeVideoFrames(gif, quantize, applyPalette, paletteSize, width, height) {
+async function encodeVideoFrames(gif, width, height) {
   const video = state.video;
   const fps = clamp(Number(dom.videoFps.value) || 6, 4, 10);
   const start = clamp(Number(dom.videoStart.value) || 0, 0, Math.max(0, video.duration - 0.5));
@@ -537,10 +760,11 @@ async function encodeVideoFrames(gif, quantize, applyPalette, paletteSize, width
   for (let i = 0; i < frameCount; i++) {
     const time = start + (i / Math.max(1, frameCount - 1)) * Math.max(0, duration - 0.02);
     await seekVideo(video, Math.min(time, video.duration - 0.01));
-    drawFrame(video);
+    const progress = frameCount <= 1 ? 0.5 : i / (frameCount - 1);
+    drawFrame(video, createAnimationFrameState(getResolvedAnimationStyle(), progress));
     const imageData = ctx.getImageData(0, 0, width, height);
     if (captured) captured.push(imageData);
-    encodeImageData(gif, quantize, applyPalette, imageData, paletteSize, frameDelay, width, height);
+    encodeImageData(gif, imageData, frameDelay, width, height);
     const totalFrames = wantsBoomerang ? frameCount * 2 - 2 : frameCount;
     const percent = 8 + Math.round(((i + 1) / totalFrames) * 84);
     setProgress(percent, `Estrazione fotogramma ${i + 1} di ${frameCount}…`);
@@ -550,7 +774,7 @@ async function encodeVideoFrames(gif, quantize, applyPalette, paletteSize, width
   if (captured && captured.length > 2) {
     const reverseFrames = captured.slice(1, -1).reverse();
     for (let i = 0; i < reverseFrames.length; i++) {
-      encodeImageData(gif, quantize, applyPalette, reverseFrames[i], paletteSize, frameDelay, width, height);
+      encodeImageData(gif, reverseFrames[i], frameDelay, width, height);
       const done = frameCount + i + 1;
       const total = frameCount + reverseFrames.length;
       const percent = 8 + Math.round((done / total) * 84);
@@ -560,15 +784,16 @@ async function encodeVideoFrames(gif, quantize, applyPalette, paletteSize, width
   }
 }
 
-function encodeCurrentCanvas(gif, quantize, applyPalette, paletteSize, delay, width, height) {
+function encodeCurrentCanvas(gif, delay, width, height) {
   const imageData = ctx.getImageData(0, 0, width, height);
-  encodeImageData(gif, quantize, applyPalette, imageData, paletteSize, delay, width, height);
+  encodeImageData(gif, imageData, delay, width, height);
 }
 
-function encodeImageData(gif, quantize, applyPalette, imageData, paletteSize, delay, width, height) {
-  const palette = quantize(imageData.data, paletteSize, { format: "rgb565" });
-  const index = applyPalette(imageData.data, palette, "rgb565");
-  gif.writeFrame(index, width, height, { palette, delay, repeat: 0 });
+function encodeImageData(gif, imageData, delay, width, height) {
+  if (imageData.width !== width || imageData.height !== height) {
+    throw new Error("Dimensioni del fotogramma non valide");
+  }
+  gif.addFrame(imageData.data, delay);
 }
 
 function showResult(blob, width, height) {
@@ -610,7 +835,7 @@ async function installApp() {
 
 function setBusy(busy) {
   dom.generateBtn.disabled = busy;
-  dom.generateBtn.textContent = busy ? "⏳ Creazione in corso…" : "✨ Crea la GIF";
+  dom.generateBtn.textContent = busy ? "⏳ Creazione in corso…" : "⚡ Rigenera ora";
   if (!busy) updateGenerateState();
   document.querySelectorAll("input, select, .mode-tab, .template").forEach(control => {
     control.disabled = busy;
@@ -850,3 +1075,5 @@ async function clearHistory() {
     showToast("Non riesco a svuotare la cronologia.");
   }
 }
+
+init();

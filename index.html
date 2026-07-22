@@ -96,11 +96,65 @@
             </div>
           </div>
 
+          <div class="wow-strip">
+            <strong>✨ Modalità WOW</strong>
+            <span>Con una sola foto la GIF viene animata automaticamente con zoom, movimento e stile meme.</span>
+          </div>
+
+          <div class="form-grid">
+            <label>
+              Scegli il tema
+              <select id="presetSelect">
+                <option value="auto">Auto divertente</option>
+                <option value="monday">Lunedì no</option>
+                <option value="salary">Aspettando lo stipendio</option>
+                <option value="minute">Solo un minuto</option>
+                <option value="problems">Nessun problema...</option>
+                <option value="shock">Che shock</option>
+                <option value="work">Vita da lavoro</option>
+                <option value="hunger">Ho fame</option>
+                <option value="love">Momento tenero</option>
+                <option value="weekend">Voglio il weekend</option>
+                <option value="sleep">Modalità sonno</option>
+                <option value="victory">Grande vittoria</option>
+              </select>
+            </label>
+            <label>
+              Animazione WOW
+              <select id="animationStyle">
+                <option value="auto">Automatica</option>
+                <option value="zoom">Zoom comico</option>
+                <option value="pulse">Pulse</option>
+                <option value="shake">Scossa</option>
+                <option value="slide">Scorrimento</option>
+                <option value="spin">Micro-rotazione</option>
+                <option value="dramatic">Drammatica</option>
+                <option value="none">Nessuna</option>
+              </select>
+            </label>
+            <label>
+              Intensità effetto
+              <input id="effectIntensity" type="range" min="1" max="10" value="6">
+              <output id="effectIntensityValue">6 / 10</output>
+            </label>
+            <label class="align-end">
+              <span class="label-hidden">Applica idea</span>
+              <button id="applyPresetBtn" type="button" class="button secondary">🎯 Applica idea automatica</button>
+            </label>
+          </div>
+
           <div class="templates" aria-label="Frasi pronte">
-            <button type="button" class="template" data-top="QUANDO È LUNEDÌ" data-bottom="E TU NON SEI PRONTO">Lunedì</button>
-            <button type="button" class="template" data-top="IO CHE ASPETTO" data-bottom="LO STIPENDIO">Stipendio</button>
-            <button type="button" class="template" data-top="QUANDO DICONO" data-bottom="CI VUOLE SOLO UN MINUTO">Un minuto</button>
-            <button type="button" class="template" data-top="NESSUN PROBLEMA" data-bottom="AVEVANO DETTO...">Nessun problema</button>
+            <button type="button" class="template" data-preset="monday">Lunedì</button>
+            <button type="button" class="template" data-preset="salary">Stipendio</button>
+            <button type="button" class="template" data-preset="minute">Un minuto</button>
+            <button type="button" class="template" data-preset="problems">Nessun problema</button>
+            <button type="button" class="template" data-preset="shock">Shock</button>
+            <button type="button" class="template" data-preset="work">Lavoro</button>
+            <button type="button" class="template" data-preset="hunger">Fame</button>
+            <button type="button" class="template" data-preset="love">Amore</button>
+            <button type="button" class="template" data-preset="weekend">Weekend</button>
+            <button type="button" class="template" data-preset="sleep">Sonno</button>
+            <button type="button" class="template" data-preset="victory">Vittoria</button>
           </div>
 
           <div class="form-grid">
@@ -223,7 +277,7 @@
             </div>
           </div>
 
-          <p class="muted auto-note">⚡ Dopo aver scelto foto o video, la GIF viene creata automaticamente.</p>
+          <p class="muted auto-note">⚡ Dopo aver scelto foto o video, la GIF viene creata automaticamente. Anche con una sola foto viene creato un effetto animato WOW.</p>
           <button id="generateBtn" class="button primary large" type="button" disabled>
             ⚡ Generazione automatica
           </button>

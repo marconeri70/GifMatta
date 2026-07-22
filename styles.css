@@ -160,6 +160,21 @@ button { cursor: pointer; }
 .template { flex: 0 0 auto; border: 1px solid #e8d8f7; border-radius: 999px; padding: 9px 13px; background: #fbf7ff; color: var(--primary-dark); font-size: 0.86rem; font-weight: 800; }
 .template:hover { background: #f0e7ff; }
 
+.wow-strip {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 14px;
+  padding: 13px 15px;
+  border: 1px solid #f3d3e8;
+  border-radius: 16px;
+  background: linear-gradient(135deg, rgba(236,72,153,.09), rgba(109,40,217,.08), rgba(245,158,11,.12));
+}
+.wow-strip strong { color: var(--primary-dark); }
+.wow-strip span { color: var(--muted); font-size: .88rem; }
+.align-end { align-self: end; }
+.label-hidden { position: absolute; left: -9999px; }
+.auto-note { margin-bottom: 14px; }
+
 .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 10px; }
 .form-grid.compact { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .form-grid label { display: grid; align-content: start; gap: 7px; color: #4d4359; font-size: 0.86rem; font-weight: 800; }
