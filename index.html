@@ -73,13 +73,13 @@
               </label>
               <label>
                 Durata
-                <input id="videoDuration" type="number" min="0.5" max="6" step="0.5" value="3">
+                <input id="videoDuration" type="number" min="0.5" max="6" step="0.5" value="2">
               </label>
               <label>
                 Fotogrammi/sec.
                 <select id="videoFps">
-                  <option value="4">4 – leggero</option>
-                  <option value="6" selected>6 – consigliato</option>
+                  <option value="4" selected>4 – automatico</option>
+                  <option value="6">6 – consigliato</option>
                   <option value="8">8 – fluido</option>
                   <option value="10">10 – massimo</option>
                 </select>
@@ -172,8 +172,8 @@
             <label>
               Risoluzione
               <select id="resolution">
-                <option value="320">320 px – leggera</option>
-                <option value="480" selected>480 px – consigliata</option>
+                <option value="320" selected>320 px – automatica e veloce</option>
+                <option value="480">480 px – consigliata</option>
                 <option value="640">640 px – alta</option>
               </select>
             </label>
@@ -209,7 +209,7 @@
           <div class="section-heading preview-heading">
             <div>
               <span class="step">4</span>
-              <h2>Anteprima</h2>
+              <h2>Anteprima e risultato automatico</h2>
             </div>
             <button id="refreshPreviewBtn" class="icon-button" type="button" title="Aggiorna anteprima" aria-label="Aggiorna anteprima">↻</button>
           </div>
@@ -223,8 +223,9 @@
             </div>
           </div>
 
+          <p class="muted auto-note">⚡ Dopo aver scelto foto o video, la GIF viene creata automaticamente.</p>
           <button id="generateBtn" class="button primary large" type="button" disabled>
-            ✨ Crea la GIF
+            ⚡ Generazione automatica
           </button>
 
           <div id="progressBox" class="progress-box hidden" aria-live="polite">
@@ -265,6 +266,7 @@
     <p>GifFacile funziona nel browser. Per risultati più leggeri usa video brevi e risoluzione 320–480 px.</p>
   </footer>
 
-  <script type="module" src="./app.js"></script>
+  <script src="./gif-encoder.js"></script>
+  <script src="./app.js"></script>
 </body>
 </html>

@@ -1,9 +1,10 @@
-const CACHE_NAME = "giffacile-v1";
+const CACHE_NAME = "giffacile-v2-auto";
 const APP_ASSETS = [
   "./",
   "./index.html",
   "./styles.css",
   "./app.js",
+  "./gif-encoder.js",
   "./manifest.webmanifest",
   "./icons/icon-192.png",
   "./icons/icon-512.png"

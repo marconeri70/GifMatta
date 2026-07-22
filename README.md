@@ -1,30 +1,13 @@
-# GifFacile
+# GifFacile – versione automatica
 
-Webapp/PWA per creare GIF divertenti da più foto o da un breve video.
+Webapp per creare GIF divertenti da foto o brevi video.
 
-## Funzioni
+## Come funziona
 
-- selezione di più foto con riordino e rimozione;
-- conversione di un video fino a 6 secondi;
-- testo superiore e inferiore in stile meme;
-- emoji, formati diversi, risoluzione e adattamento;
-- effetto boomerang;
-- download e condivisione della GIF;
-- cronologia locale delle ultime GIF;
-- installazione come PWA.
+1. Apri `index.html` tramite GitHub Pages, Cloudflare Pages o un server web.
+2. Seleziona una o più foto, oppure un video.
+3. La GIF viene generata automaticamente.
+4. Modificando testo, emoji o impostazioni, la GIF viene rigenerata automaticamente.
+5. Usa **Scarica** o **Condividi**.
 
-## Pubblicazione
-
-Caricare tutti i file mantenendo le cartelle. È adatta a GitHub Pages, Cloudflare Pages e qualsiasi hosting statico.
-
-La prima creazione richiede una connessione per caricare la libreria `gifenc` da UNPKG. Dopo il primo utilizzo il service worker prova a conservarla nella cache del browser.
-
-## Avvio locale
-
-Per provare l'app da computer, aprire la cartella con un piccolo server HTTP, ad esempio:
-
-```bash
-python -m http.server 8000
-```
-
-Poi aprire `http://localhost:8000`.
+Il motore GIF è incluso nel progetto: non dipende da CDN o librerie esterne e può funzionare anche offline dopo il primo caricamento della PWA.
